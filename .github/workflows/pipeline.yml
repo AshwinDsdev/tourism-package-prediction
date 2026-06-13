@@ -1,0 +1,55 @@
+name: Wellness Tourism MLOps Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  mlops-pipeline:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Dependencies
+      run: |
+        pip install -r mlops_project/deployment/requirements.txt
+        pip install python-dotenv
+
+    - name: Execute Data Registration
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: python mlops_project/model_building/data_register.py
+
+    - name: Execute Data Preparation
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: python mlops_project/model_building/prep.py
+
+    - name: Execute Model Training
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: python mlops_project/model_building/train.py
+
+    - name: Execute Model Deployment
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: python mlops_project/deployment/deploy.py
+
+    - name: Push code updates to main branch
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add .
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Automated model pipeline update" && git push)
